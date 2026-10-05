@@ -176,18 +176,59 @@ def cleanup_async(job_id, keep=None):
     ).start()
 
 
+def cookies_file_problem(path):
+    """Validate a cookies.txt setting. Return a readable problem, or None.
+
+    yt-dlp is handed the path verbatim and explodes with a raw traceback when
+    it is wrong, which tells the user nothing. Checking here lets the Settings
+    panel reject a bad value with something actionable instead.
+    """
+    if not path:
+        return None
+
+    if not os.path.isabs(path):
+        return (
+            "Cookies file must be an absolute path, for example "
+            r"C:\Users\you\cookies.txt"
+            f" — got {path!r}"
+        )
+
+    if not os.path.isfile(path):
+        return f"Cookies file not found: {path}"
+
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(512).decode("utf-8", "replace")
+    except OSError as exc:
+        return f"Cookies file cannot be read: {exc}"
+
+    if "Netscape HTTP Cookie File" not in head and "\t" not in head:
+        return (
+            f"{path} does not look like a Netscape-format cookies.txt. "
+            "Export it with a browser extension such as 'Get cookies.txt LOCALLY'."
+        )
+
+    return None
+
+
 def media_options():
     """Proxy / cookie flags shared by every yt-dlp invocation."""
     opts = []
     proxy = (settings.get("proxy") or "").strip()
     if proxy:
         opts += ["--proxy", proxy]
+
     cookies_file = (settings.get("cookies_file") or "").strip()
     cookies_browser = (settings.get("cookies_from_browser") or "").strip()
     if cookies_file:
-        opts += ["--cookies", cookies_file]
+        if not cookies_file_problem(cookies_file):
+            opts += ["--cookies", cookies_file]
+        # A bad path is rejected by /api/settings. If one slips through, running
+        # without cookies produces the site's own "cookies are needed" error,
+        # which is far more useful than a FileNotFoundError traceback.
     elif cookies_browser:
         opts += ["--cookies-from-browser", cookies_browser]
+
     return opts
 
 
@@ -466,18 +507,26 @@ def api_settings():
 
     data = request.json or {}
     with _settings_lock:
-        for key in DEFAULT_SETTINGS:
-            if key in data:
-                settings[key] = data[key]
+        # Build the new state on a copy so a rejected value cannot leave the
+        # running configuration half-updated.
+        candidate = dict(settings)
+        candidate.update({k: v for k, v in data.items() if k in DEFAULT_SETTINGS})
+
         try:
-            settings["concurrency"] = max(1, min(8, int(settings["concurrency"])))
-            settings["timeout"] = max(30, min(7200, int(settings["timeout"])))
-            settings["job_ttl"] = max(60, min(604800, int(settings["job_ttl"])))
+            candidate["concurrency"] = max(1, min(8, int(candidate["concurrency"])))
+            candidate["timeout"] = max(30, min(7200, int(candidate["timeout"])))
+            candidate["job_ttl"] = max(60, min(604800, int(candidate["job_ttl"])))
         except (TypeError, ValueError):
-            settings.update(load_settings())
             return jsonify({"error": "Invalid numeric setting"}), 400
+
         for key in ("proxy", "cookies_from_browser", "cookies_file"):
-            settings[key] = str(settings.get(key) or "").strip()
+            candidate[key] = str(candidate.get(key) or "").strip()
+
+        problem = cookies_file_problem(candidate["cookies_file"])
+        if problem:
+            return jsonify({"error": problem}), 400
+
+        settings.update(candidate)
         save_settings(settings)
 
     return jsonify({"ok": True, "workers": ensure_workers()})

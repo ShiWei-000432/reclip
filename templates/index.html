@@ -192,6 +192,21 @@
       transition: border-color 0.2s;
     }
     .set-row input:focus { border-color: var(--accent); }
+    .set-note {
+      font-size: 0.66rem;
+      line-height: 1.6;
+      color: var(--muted);
+      border-left: 2px solid var(--card-border);
+      padding-left: 10px;
+      margin: 4px 0 12px;
+    }
+    .set-note code {
+      font-family: 'DM Mono', monospace;
+      color: var(--fg);
+      background: rgba(0,0,0,0.04);
+      padding: 0 3px;
+      border-radius: 3px;
+    }
     .set-actions {
       display: flex;
       align-items: center;
@@ -482,6 +497,17 @@
           <label for="setProxy">Proxy</label>
           <input id="setProxy" type="text" placeholder="http://127.0.0.1:7890">
         </div>
+
+        <p class="set-note">
+          <b>Cookies</b> — required by Douyin, Instagram, member-only content and
+          anything you can only see while logged in.<br>
+          Most reliable: export a Netscape-format <code>cookies.txt</code> with a browser
+          extension and put its <b>full Windows path</b> in <b>Cookies file</b><br>
+          e.g. <code>C:\Users\you\cookies.txt</code>.
+          <b>Cookies browser</b> is a shortcut but fails while the browser is open,
+          and cannot read Chrome 127+ profiles.
+        </p>
+
         <div class="set-row">
           <label for="setCookiesBrowser">Cookies browser</label>
           <input id="setCookiesBrowser" type="text" placeholder="chrome / edge / firefox">
@@ -512,9 +538,9 @@
     <div id="cards" class="cards"></div>
 
     <div class="footer">
-      YouTube &middot; TikTok &middot; Instagram &middot; Twitter/X &middot; Reddit &middot; Facebook<br>
-      Vimeo &middot; Twitch &middot; Dailymotion &middot; SoundCloud &middot; Loom &middot; Streamable<br>
-      Pinterest &middot; Tumblr &middot; Threads &middot; LinkedIn &middot; 1000+ more
+      YouTube &middot; TikTok &middot; Douyin &middot; Bilibili &middot; Instagram &middot; Twitter/X<br>
+      Reddit &middot; Facebook &middot; Vimeo &middot; Twitch &middot; Dailymotion &middot; SoundCloud<br>
+      Loom &middot; Streamable &middot; Pinterest &middot; Tumblr &middot; Threads &middot; 1000+ more
     </div>
   </div>
 
@@ -603,9 +629,37 @@
       return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
     }
 
+    const COOKIE_HINT =
+      'This site needs cookies (Douyin, Instagram, member-only videos). ' +
+      'Open ⚙ Settings and set "Cookies file" to a cookies.txt exported from your browser.';
+
     function friendlyError(err) {
       const e = String(err || '');
+
       if (e.includes('Unauthorized')) return 'Access token required or invalid';
+
+      // Sites that gate their API behind cookies.
+      if (/fresh cookies|cookies? (?:are )?(?:needed|required)|Sign in to confirm|login required|not logged in/i.test(e)) {
+        return COOKIE_HINT;
+      }
+      // yt-dlp could not read a browser's cookie store.
+      if (/Could not copy Chrome cookie database/i.test(e)) {
+        return 'The browser cookie store is locked — close the browser and retry, ' +
+               'or export a cookies.txt and set "Cookies file" instead.';
+      }
+      if (/Failed to decrypt with DPAPI/i.test(e)) {
+        return 'This browser profile cannot be decrypted (Chrome 127+ app-bound encryption). ' +
+               'Export a cookies.txt and set "Cookies file" instead.';
+      }
+      // Produced by /api/settings; already actionable, show it verbatim.
+      if (/Cookies file (?:not found|cannot be read|must be an absolute path)/i.test(e)) {
+        return e.length > 160 ? e.slice(0, 160) + '...' : e;
+      }
+      if (/FileNotFoundError|No such file or directory/i.test(e)) {
+        return 'File not found — for "Cookies file" use a full Windows path, ' +
+               'e.g. C:\\Users\\you\\cookies.txt';
+      }
+
       if (e.includes('Unsupported URL')) return 'This URL is not supported';
       if (e.includes('Video unavailable')) return 'Video is unavailable or private';
       if (e.includes('Private video')) return 'This video is private';
