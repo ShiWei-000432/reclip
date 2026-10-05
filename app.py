@@ -148,12 +148,7 @@ def job_files(job_id):
 
 
 def remove_job_files(job_id, keep=None):
-    """Best-effort removal of a job's leftovers.
-
-    Cleanup is cosmetic: a file that cannot be deleted (antivirus holding a
-    lock, a read-only share, an environment that blocks deletes outright)
-    must never change the outcome of the download itself. Catch broadly.
-    """
+    """Best-effort removal of a job's leftovers. Never raises."""
     try:
         remaining = job_files(job_id)
     except Exception:
@@ -165,6 +160,20 @@ def remove_job_files(job_id, keep=None):
             os.remove(path)
         except Exception:
             pass
+
+
+def cleanup_async(job_id, keep=None):
+    """Delete leftovers off the calling thread.
+
+    Cleanup is cosmetic. It must never gate a job's outcome, and it must
+    never be able to stall a worker: a delete can block for an unbounded time
+    when antivirus, a search indexer or a policy layer holds the file, and
+    the worker's slot is worth far more than the freed bytes. Running it on a
+    throwaway daemon thread keeps both guarantees.
+    """
+    threading.Thread(
+        target=remove_job_files, args=(job_id,), kwargs={"keep": keep}, daemon=True
+    ).start()
 
 
 def media_options():
@@ -297,7 +306,7 @@ def reaper_loop():
             for jid in stale:
                 job = jobs.pop(jid, None)
                 if job is not None:
-                    remove_job_files(jid)
+                    cleanup_async(jid)
 
 
 # ------------------------------------------------------------------ download
@@ -350,13 +359,13 @@ def run_download(job_id):
         if job.get("cancel_requested"):
             job["status"] = "cancelled"
             job["error"] = None
-            remove_job_files(job_id)
+            cleanup_async(job_id)
             return
 
         if job.get("timed_out"):
             job["status"] = "error"
             job["error"] = f"Download timed out ({timeout}s limit)"
-            remove_job_files(job_id)
+            cleanup_async(job_id)
             return
 
         # Trust the file on disk over yt-dlp's exit code. yt-dlp exits
@@ -379,13 +388,13 @@ def run_download(job_id):
                 job["error"] = tail[-1]
             else:
                 job["error"] = "Download completed but no file was found"
-            remove_job_files(job_id)
+            cleanup_async(job_id)
             return
 
-        # Best-effort cleanup only — failing to remove intermediates must
-        # never turn a successful download into an error.
-        remove_job_files(job_id, keep=chosen)
-
+        # Publish the result FIRST. Deleting the intermediates is cosmetic, so
+        # it happens afterwards and off this thread — see cleanup_async(). If it
+        # ran here, a blocking delete would leave a finished download stranded
+        # in 'downloading' forever and permanently consume a worker slot.
         job["status"] = "done"
         job["file"] = chosen
         job["progress"] = dict(job.get("progress") or {}, percent=100.0)
@@ -396,6 +405,8 @@ def run_download(job_id):
             job["filename"] = f"{safe}{ext}" if safe else os.path.basename(chosen)
         else:
             job["filename"] = os.path.basename(chosen)
+
+        cleanup_async(job_id, keep=chosen)
 
     except Exception as exc:
         job["status"] = "error"
