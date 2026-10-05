@@ -141,6 +141,64 @@
     .fetch-btn:active { transform: scale(0.98); }
     .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+    /* Settings */
+    .settings-wrap { margin-bottom: 22px; }
+    .settings-toggle {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.2s;
+    }
+    .settings-toggle:hover { color: var(--fg); }
+
+    .settings {
+      margin-top: 12px;
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius);
+      background: var(--card);
+      padding: 16px 18px;
+    }
+    .set-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .set-row label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      flex: 0 0 auto;
+    }
+    .set-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 7px 10px;
+      border: 1.5px solid var(--card-border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.74rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .set-row input:focus { border-color: var(--accent); }
+    .set-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
     /* Cards */
     .cards { margin-top: 24px; }
 
@@ -175,7 +233,6 @@
       object-fit: cover;
       display: block;
     }
-    /* No-thumbnail icon */
     .card-thumb .no-thumb {
       width: 100%;
       height: 100%;
@@ -190,7 +247,6 @@
       opacity: 0.5;
     }
 
-    /* Shimmer skeleton for loading state */
     .card-thumb.loading {
       background: var(--shimmer);
       background-size: 200% 100%;
@@ -261,6 +317,12 @@
     .card-dl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .card-dl-btn.done { background: var(--success); color: #fff; }
     .card-dl-btn.error { background: var(--error); color: #fff; }
+    .card-dl-btn.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1.5px solid var(--card-border);
+    }
+    .card-dl-btn.ghost:hover { background: rgba(0,0,0,0.03); color: var(--fg); }
 
     .card-status {
       font-size: 0.68rem;
@@ -269,6 +331,22 @@
     .card-status.downloading { color: var(--accent); }
     .card-status.done { color: var(--success); }
     .card-status.error { color: var(--error); }
+
+    /* Progress bar */
+    .prog {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--card-border);
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .prog-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
 
     .q-chip {
       padding: 4px 10px;
@@ -288,7 +366,6 @@
     }
     .q-chip:hover:not(.active) { border-color: var(--muted); }
 
-    /* Error card */
     .card.card-error {
       border-color: rgba(196, 61, 61, 0.2);
       background: rgba(196, 61, 61, 0.03);
@@ -319,7 +396,6 @@
       margin-top: 4px;
     }
 
-    /* Download all bar */
     .dl-all-bar {
       display: flex;
       gap: 10px;
@@ -364,7 +440,6 @@
       line-height: 1.8;
     }
 
-    /* Mobile */
     @media (max-width: 500px) {
       .brand h1 { font-size: 3rem; }
       .page { padding: 40px 16px 60px; }
@@ -377,6 +452,7 @@
       .card-title { white-space: normal; }
       .controls { flex-wrap: wrap; }
       .fetch-btn { width: 100%; }
+      .set-row { flex-direction: column; align-items: stretch; gap: 4px; }
     }
   </style>
 </head>
@@ -385,6 +461,41 @@
     <div class="brand">
       <h1>Re<em>Clip</em></h1>
       <p>Free media downloader</p>
+    </div>
+
+    <div class="settings-wrap">
+      <button class="settings-toggle" id="setToggle" onclick="toggleSettings()">⚙ Settings</button>
+      <div class="settings" id="setPanel" hidden>
+        <div class="set-row">
+          <label for="setConcurrency">Concurrent</label>
+          <input id="setConcurrency" type="number" min="1" max="8" step="1" placeholder="3">
+        </div>
+        <div class="set-row">
+          <label for="setTimeout">Timeout (s)</label>
+          <input id="setTimeout" type="number" min="30" max="7200" step="30" placeholder="300">
+        </div>
+        <div class="set-row">
+          <label for="setJobTtl">Keep jobs (s)</label>
+          <input id="setJobTtl" type="number" min="60" step="60" placeholder="3600">
+        </div>
+        <div class="set-row">
+          <label for="setProxy">Proxy</label>
+          <input id="setProxy" type="text" placeholder="http://127.0.0.1:7890">
+        </div>
+        <div class="set-row">
+          <label for="setCookiesBrowser">Cookies browser</label>
+          <input id="setCookiesBrowser" type="text" placeholder="chrome / edge / firefox">
+        </div>
+        <div class="set-row">
+          <label for="setCookiesFile">Cookies file</label>
+          <input id="setCookiesFile" type="text" placeholder="C:\path\to\cookies.txt">
+        </div>
+        <div class="set-actions">
+          <button class="card-dl-btn" onclick="saveSettings()">Save</button>
+          <button class="card-dl-btn ghost" onclick="loadSettings()">Reload</button>
+          <span class="card-status" id="setStatus"></span>
+        </div>
+      </div>
     </div>
 
     <textarea id="urls" placeholder="Paste one or more URLs..." rows="2"></textarea>
@@ -410,6 +521,50 @@
   <script>
     let currentFormat = 'video';
     let cardData = [];
+    let TOKEN = localStorage.getItem('reclip_token') || '';
+    let AUTH_REQUIRED = false;
+
+    /* ------------------------------------------------------------------ util */
+
+    // For TEXT nodes: relies on textContent -> innerHTML serialisation.
+    // Per the HTML spec this escapes & < > but NOT quotes.
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    // For ATTRIBUTE values. esc() is not sufficient here because it leaves
+    // double quotes intact, which is all it takes to break out of src="...".
+    function escAttr(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[ch]));
+    }
+
+    function num(v, fallback) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function apiUrl(path) {
+      if (!TOKEN) return path;
+      return path + (path.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(TOKEN);
+    }
+
+    // Wraps fetch: on 401 asks for the token once, stores it, and retries.
+    async function apiFetch(path, options) {
+      let res = await fetch(apiUrl(path), options);
+      if (res.status === 401) {
+        const entered = window.prompt('This ReClip server requires an access token:');
+        if (entered && entered.trim()) {
+          TOKEN = entered.trim();
+          localStorage.setItem('reclip_token', TOKEN);
+          res = await fetch(apiUrl(path), options);
+        }
+      }
+      return res;
+    }
 
     function setFormat(btn) {
       document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
@@ -422,30 +577,99 @@
     }
 
     function fmtDur(s) {
-      if (!s) return '';
-      const m = Math.floor(s / 60);
-      const sec = Math.floor(s % 60);
+      const n = num(s, null);
+      if (n == null || n < 0) return '';
+      const m = Math.floor(n / 60);
+      const sec = Math.floor(n % 60);
       return `${m}:${sec.toString().padStart(2, '0')}`;
     }
 
-    function esc(s) {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML;
+    function fmtSpeed(bytesPerSec) {
+      const n = num(bytesPerSec, null);
+      if (n == null || n <= 0) return '';
+      const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+      let i = 0;
+      let v = n;
+      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+      return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+    }
+
+    function fmtSize(bytes) {
+      const n = num(bytes, null);
+      if (n == null || n <= 0) return '';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let i = 0, v = n;
+      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+      return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
     }
 
     function friendlyError(err) {
-      if (err.includes('Unsupported URL')) return 'This URL is not supported';
-      if (err.includes('Video unavailable')) return 'Video is unavailable or private';
-      if (err.includes('Private video')) return 'This video is private';
-      if (err.includes('HTTP Error 403')) return 'Access denied by the platform';
-      if (err.includes('HTTP Error 404')) return 'Video not found';
-      if (err.includes('copyright')) return 'Video blocked due to copyright';
-      if (err.includes('geo')) return 'Video not available in your region';
-      if (err.includes('timed out') || err.includes('Timed out')) return 'Request timed out — try again';
-      if (err.includes('network') || err.includes('Network')) return 'Network error — check your connection';
-      return err.length > 80 ? err.slice(0, 80) + '...' : err;
+      const e = String(err || '');
+      if (e.includes('Unauthorized')) return 'Access token required or invalid';
+      if (e.includes('Unsupported URL')) return 'This URL is not supported';
+      if (e.includes('Video unavailable')) return 'Video is unavailable or private';
+      if (e.includes('Private video')) return 'This video is private';
+      if (e.includes('HTTP Error 403')) return 'Access denied by the platform';
+      if (e.includes('HTTP Error 404')) return 'Video not found';
+      if (e.includes('copyright')) return 'Video blocked due to copyright';
+      if (e.includes('ffmpeg')) return 'ffmpeg missing — MP4/MP3 merging cannot run';
+      if (e.includes('timed out') || e.includes('Timed out')) return 'Request timed out — try again';
+      if (e.includes('network') || e.includes('Network')) return 'Network error — check your connection';
+      return e.length > 90 ? e.slice(0, 90) + '...' : e;
     }
+
+    /* -------------------------------------------------------------- settings */
+
+    function toggleSettings() {
+      const panel = document.getElementById('setPanel');
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden) loadSettings();
+    }
+
+    async function loadSettings() {
+      const status = document.getElementById('setStatus');
+      try {
+        const res = await apiFetch('/api/settings');
+        const d = await res.json();
+        if (d.error) { status.textContent = d.error; return; }
+        document.getElementById('setConcurrency').value = d.concurrency;
+        document.getElementById('setTimeout').value = d.timeout;
+        document.getElementById('setJobTtl').value = d.job_ttl;
+        document.getElementById('setProxy').value = d.proxy || '';
+        document.getElementById('setCookiesBrowser').value = d.cookies_from_browser || '';
+        document.getElementById('setCookiesFile').value = d.cookies_file || '';
+        AUTH_REQUIRED = !!d.auth_required;
+        status.textContent = `workers ${d.workers} · queued ${d.queued}`
+          + (AUTH_REQUIRED ? ' · auth ON' : ' · auth off');
+      } catch (err) {
+        status.textContent = 'Could not load settings';
+      }
+    }
+
+    async function saveSettings() {
+      const status = document.getElementById('setStatus');
+      status.textContent = 'Saving...';
+      try {
+        const res = await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            concurrency: num(document.getElementById('setConcurrency').value, undefined),
+            timeout: num(document.getElementById('setTimeout').value, undefined),
+            job_ttl: num(document.getElementById('setJobTtl').value, undefined),
+            proxy: document.getElementById('setProxy').value,
+            cookies_from_browser: document.getElementById('setCookiesBrowser').value,
+            cookies_file: document.getElementById('setCookiesFile').value,
+          }),
+        });
+        const d = await res.json();
+        status.textContent = d.ok ? `Saved · workers ${d.workers}` : (d.error || 'Save failed');
+      } catch (err) {
+        status.textContent = 'Save failed';
+      }
+    }
+
+    /* ------------------------------------------------------------------ flow */
 
     document.getElementById('urls').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(); }
@@ -462,20 +686,24 @@
       container.innerHTML = '';
       cardData = [];
 
-      // Check if youtube playlist URL
+      // Expand playlist URLs. Only the explicit `list=` parameter counts; a
+      // bare watch URL that merely happens to carry one is left alone so the
+      // single video still downloads on its own.
       for (let i = 0; i < urls.length; i++) {
-        if (urls[i].includes('list=')) {
-          const res = await fetch('/api/playlist', {
+        if (!/[?&]list=/.test(urls[i])) continue;
+        try {
+          const res = await apiFetch('/api/playlist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: urls[i] }),
           });
           const data = await res.json();
-          if (data.urls) {
-            // replace playlist URL with individual video URLs
+          if (Array.isArray(data.urls) && data.urls.length) {
+            // Insert BEFORE the current index so nothing is skipped.
             urls.splice(i, 1, ...data.urls);
+            i--;   // re-examine whatever landed at this position
           }
-        }
+        } catch (err) { /* fall through and let /api/info report the error */ }
       }
 
       for (let i = 0; i < urls.length; i++) {
@@ -485,7 +713,7 @@
         renderCard(idx);
 
         try {
-          const res = await fetch('/api/info', {
+          const res = await apiFetch('/api/info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
@@ -529,7 +757,6 @@
         document.getElementById('cards').appendChild(el);
       }
 
-      // Loading skeleton
       if (c.status === 'loading') {
         el.className = 'card';
         el.innerHTML = `
@@ -542,7 +769,6 @@
         return;
       }
 
-      // Error state
       if (c.status === 'info-error') {
         el.className = 'card card-error';
         el.innerHTML = `
@@ -553,22 +779,23 @@
           </div>
           <div class="card-body">
             <div class="card-title" style="color:var(--error)">Could not fetch video</div>
-            <div class="card-error-msg">${esc(friendlyError(c.error || ''))}</div>
+            <div class="card-error-msg">${esc(friendlyError(c.error))}</div>
             <div class="card-error-url">${esc(c.url)}</div>
           </div>
         `;
         return;
       }
 
-      // Ready / downloading / done / error states
       el.className = 'card';
       const isAudio = currentFormat === 'audio';
 
+      // Attribute context: must go through escAttr, not esc.
+      const safeThumb = /^https?:\/\//i.test(c.thumbnail || '') ? c.thumbnail : '';
       let thumbHtml;
       if (isAudio) {
         thumbHtml = `<div class="no-thumb" style="color:var(--accent)"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>`;
-      } else if (c.thumbnail) {
-        thumbHtml = `<img src="${c.thumbnail}" alt="">`;
+      } else if (safeThumb) {
+        thumbHtml = `<img src="${escAttr(safeThumb)}" alt="">`;
       } else {
         thumbHtml = `<div class="no-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>`;
       }
@@ -576,28 +803,46 @@
       let qualityChips = '';
       if (!isAudio && c.formats && c.formats.length > 1) {
         qualityChips = c.formats.map(f =>
-          `<button class="q-chip${f.id === c.selectedFormatId ? ' active' : ''}" onclick="pickFormat(${idx}, '${f.id}')">${f.label}</button>`
+          `<button class="q-chip${f.id === c.selectedFormatId ? ' active' : ''}" onclick="pickFormat(${idx}, '${escAttr(f.id)}')">${esc(f.label)}</button>`
         ).join('');
       }
 
       let actionHtml = '';
       if (c.status === 'ready') {
         actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">Download</button>${qualityChips}`;
+      } else if (c.status === 'queued') {
+        actionHtml = `<span class="card-status downloading"><span class="spin"></span> Queued${c.position ? ' · #' + num(c.position, '') : ''}</span>
+          <button class="card-dl-btn ghost" onclick="cancelCard(${idx})">Cancel</button>`;
       } else if (c.status === 'downloading') {
-        actionHtml = `<span class="card-status downloading"><span class="spin"></span> Downloading...</span>`;
+        const p = c.progress || {};
+        const pct = num(p.percent, null);
+        let detail = '';
+        if (pct != null) {
+          const bits = [`${pct}%`];
+          if (num(p.downloaded, null) != null) bits.push(fmtSize(p.downloaded));
+          if (num(p.speed, null)) bits.push(fmtSpeed(p.speed));
+          if (num(p.eta, null) != null) bits.push('ETA ' + fmtDur(p.eta));
+          detail = bits.join(' · ');
+        }
+        actionHtml = `${pct != null ? `<div class="prog"><div class="prog-bar" style="width:${Math.max(0, Math.min(100, pct))}%"></div></div>` : ''}
+          <span class="card-status downloading"><span class="spin"></span> ${detail || 'Downloading...'}</span>
+          <button class="card-dl-btn ghost" onclick="cancelCard(${idx})">Cancel</button>`;
       } else if (c.status === 'done') {
         actionHtml = `<button class="card-dl-btn done" onclick="saveCard(${idx})">Save</button>
-          <span class="card-status done">${esc(c.filename || '')}</span>`;
+          <span class="card-status done">${esc(c.filename)}</span>`;
+      } else if (c.status === 'cancelled') {
+        actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">Retry</button>
+          <span class="card-status">Cancelled</span>`;
       } else if (c.status === 'error') {
         actionHtml = `<button class="card-dl-btn" onclick="dlCard(${idx})">Retry</button>
-          <span class="card-status error">${esc(friendlyError(c.error || 'Download failed'))}</span>`;
+          <span class="card-status error">${esc(friendlyError(c.error))}</span>`;
       }
 
       el.innerHTML = `
         <div class="card-thumb">${thumbHtml}</div>
         <div class="card-body">
           <div class="card-title">${esc(c.title || 'Untitled')}</div>
-          <div class="card-meta">${esc(c.uploader)}${c.duration ? ' · ' + fmtDur(c.duration) : ''}</div>
+          <div class="card-meta">${esc(c.uploader)}${c.duration ? ' · ' + esc(fmtDur(c.duration)) : ''}</div>
           <div class="card-actions">${actionHtml}</div>
         </div>
       `;
@@ -621,12 +866,13 @@
 
     async function dlCard(idx) {
       const c = cardData[idx];
-      c.status = 'downloading';
+      c.status = 'queued';
       c.error = null;
+      c.progress = {};
       renderCard(idx);
 
       try {
-        const res = await fetch('/api/download', {
+        const res = await apiFetch('/api/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -644,6 +890,7 @@
           return;
         }
         c.jobId = data.job_id;
+        c.position = data.queued;
         pollCard(idx);
       } catch (err) {
         c.status = 'error';
@@ -652,12 +899,31 @@
       }
     }
 
+    async function cancelCard(idx) {
+      const c = cardData[idx];
+      if (!c.jobId) { c.status = 'ready'; renderCard(idx); return; }
+      try {
+        await apiFetch(`/api/cancel/${encodeURIComponent(c.jobId)}`, { method: 'POST' });
+      } catch (err) { /* the poll loop will reflect the real state */ }
+    }
+
     function pollCard(idx) {
       const c = cardData[idx];
+      let failures = 0;
       const iv = setInterval(async () => {
         try {
-          const res = await fetch(`/api/status/${c.jobId}`);
+          const res = await apiFetch(`/api/status/${encodeURIComponent(c.jobId)}`);
+          if (res.status === 404) {
+            clearInterval(iv);
+            c.status = 'error';
+            c.error = 'Job not found (server may have restarted)';
+            renderCard(idx);
+            return;
+          }
           const data = await res.json();
+          failures = 0;
+          c.progress = data.progress || {};
+
           if (data.status === 'done') {
             clearInterval(iv);
             c.status = 'done';
@@ -669,12 +935,23 @@
             c.status = 'error';
             c.error = data.error;
             renderCard(idx);
+          } else if (data.status === 'cancelled') {
+            clearInterval(iv);
+            c.status = 'cancelled';
+            renderCard(idx);
+          } else {
+            c.status = data.status;
+            c.position = data.queued;
+            renderCard(idx);
           }
-        } catch {
-          clearInterval(iv);
-          c.status = 'error';
-          c.error = 'Lost connection to server';
-          renderCard(idx);
+        } catch (err) {
+          failures++;
+          if (failures >= 5) {
+            clearInterval(iv);
+            c.status = 'error';
+            c.error = 'Lost connection to server';
+            renderCard(idx);
+          }
         }
       }, 1000);
     }
@@ -683,11 +960,14 @@
       const c = cardData[idx];
       if (!c.jobId) return;
       const a = document.createElement('a');
-      a.href = `/api/file/${c.jobId}`;
+      a.href = apiUrl(`/api/file/${encodeURIComponent(c.jobId)}`);
       a.download = c.filename || '';
       a.click();
     }
 
+    // Fire every request immediately; the server-side queue bounds how many
+    // actually run at once, so a large playlist cannot spawn hundreds of
+    // yt-dlp processes.
     async function dlAll() {
       const btn = document.querySelector('.dl-all-btn');
       if (btn) { btn.disabled = true; btn.textContent = 'Downloading...'; }
@@ -700,6 +980,8 @@
 
       if (btn) { btn.disabled = false; btn.textContent = 'Download All'; }
     }
+
+    loadSettings();
   </script>
 </body>
 </html>

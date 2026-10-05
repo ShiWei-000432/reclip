@@ -8,3 +8,6 @@ assets/*.mov
 .env.local
 .env.production
 .env.development
+# runtime state written by /api/settings
+settings.json
+cookies.txt
